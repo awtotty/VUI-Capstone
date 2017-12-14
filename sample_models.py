@@ -101,7 +101,6 @@ def deep_rnn_model(input_dim, units, recur_layers, output_dim=29):
     rnn = GRU(units, return_sequences=True, implementation=2, name='rnn_0')(input_data)
     bn_rnn = BatchNormalization(name='bn_rnn_0')(rnn)
     for i in range(1,recur_layers):
-        print(i)
         rnn = GRU(units, return_sequences=True, implementation=2, name='rnn_{}'.format(i))(bn_rnn)
         bn_rnn = BatchNormalization(name='bn_rnn_{}'.format(i))(rnn)
     # TODO: Add a TimeDistributed(Dense(output_dim)) layer
@@ -132,18 +131,24 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def final_model():
+def final_model(input_dim, units, recur_layers, output_dim=29):
     """ Build a deep network for speech 
     """
     # Main acoustic input
     input_data = Input(name='the_input', shape=(None, input_dim))
-    # TODO: Specify the layers in your network
-    ...
-    # TODO: Add softmax activation layer
-    y_pred = ...
+    # First bidirectional RNN
+    bidir_rnn = Bidirectional(GRU(units, return_sequences=True, implementation=2,
+                                  name='rnn'))(input_data)
+    # Additional bidirectional layers for deeper architecture
+    for i in range(1,recur_layers):
+        bidir_rnn = Bidirectional(GRU(units, return_sequences=True, implementation=2,
+                                  name='rnn_{}'.format(i)))(bidir_rnn)
+    # Add a TimeDistributed(Dense(output_dim)) layer
+    time_dense = TimeDistributed(Dense(output_dim))(bidir_rnn)
+    # Add softmax activation layer
+    y_pred = Activation('softmax', name='softmax')(time_dense)
     # Specify the model
     model = Model(inputs=input_data, outputs=y_pred)
-    # TODO: Specify model.output_length
-    model.output_length = ...
+    model.output_length = lambda x: x
     print(model.summary())
     return model
